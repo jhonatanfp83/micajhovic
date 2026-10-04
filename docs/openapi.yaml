@@ -1,0 +1,167 @@
+openapi: 3.0.3
+info:
+  title: MICAJHOVIC API - Control de acceso con QR dinámicos
+  version: 1.0.0
+  description: |
+    API que consume la app móvil MCJV (Android).
+    - El usuario inicia sesión y recibe un token que la app convierte en código QR.
+    - En la portería, la app del vigilante escanea el QR y llama a validar_qr.php.
+    - Cada token sirve UNA sola vez: después de leerlo se reemplaza ("QR quemado").
+
+    Nota: los errores de negocio responden HTTP 200 con `status: "error"`, porque así
+    los procesa la app (Volley trata los 4xx como fallo de red).
+  contact:
+    name: Grupo MICAJHOVIC - Fundación Universitaria Los Libertadores
+servers:
+  - url: https://micajhovic-api.onrender.com
+    description: Producción (Render)
+  - url: http://localhost/micajhovic/backend
+    description: Desarrollo local (XAMPP)
+paths:
+  /login_app.php:
+    post:
+      summary: Login del usuario en la app y generación de un QR nuevo
+      tags: [App móvil]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [correo, password]
+              properties:
+                correo: { type: string, example: camilo_100_5955@mcjv.com }
+                password: { type: string, example: XAZGJ3NF }
+      responses:
+        "200":
+          description: Resultado del login
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/LoginExitoso'
+                  - $ref: '#/components/schemas/Error'
+              examples:
+                exito:
+                  value: { status: success, nombre: camilo, correo: camilo_100_5955@mcjv.com, token: 3f1c0b8e9a7d4c2b8e1f0a9d7c6b5a43 }
+                faltanDatos:
+                  value: { status: error, mensaje: Faltan datos }
+                credenciales:
+                  value: { status: error, mensaje: Credenciales incorrectas }
+        "405": { description: Método no permitido (solo POST) }
+  /validar_qr.php:
+    post:
+      summary: Valida un QR en la portería y registra ENTRADA o SALIDA
+      description: |
+        Si el último registro del usuario fue ENTRADA, registra SALIDA; si no, ENTRADA.
+        Guarda fecha y hora de Colombia y cambia el token del usuario.
+      tags: [App móvil]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, pattern: '^[a-f0-9]{32}$', example: 3f1c0b8e9a7d4c2b8e1f0a9d7c6b5a43 }
+      responses:
+        "200":
+          description: Resultado de la validación
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidacionExitosa'
+                  - $ref: '#/components/schemas/Error'
+              examples:
+                entrada:
+                  value: { status: success, nombre: camilo, tipo: ENTRADA }
+                salida:
+                  value: { status: success, nombre: camilo, tipo: SALIDA }
+                yaUsado:
+                  value: { status: error, mensaje: QR inválido o ya utilizado }
+        "405": { description: Método no permitido (solo POST) }
+        "500": { description: Error del servidor o de la base de datos }
+  /validar.php:
+    post:
+      summary: Login del administrador (panel web)
+      tags: [Panel web]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                correo: { type: string }
+                password: { type: string }
+      responses:
+        "302": { description: Login correcto, redirige a dashboard.php y crea la sesión }
+        "200": { description: Datos incorrectos (muestra alerta y vuelve al login) }
+  /guardar_usuario.php:
+    post:
+      summary: Crea un usuario (requiere sesión de administrador)
+      tags: [Panel web]
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                nombre: { type: string, example: Victor Oviedo }
+                documento: { type: string, pattern: '^\d{5,15}$', example: '1000123456' }
+      responses:
+        "200": { description: "Alerta con el resultado: creado, documento duplicado o error de validación" }
+        "302": { description: Sin sesión, redirige al login }
+  /eliminar_usuario.php:
+    get:
+      summary: Elimina un usuario (requiere sesión). Su historial se conserva.
+      tags: [Panel web]
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "302": { description: Redirige a usuarios.php }
+  /dashboard.php:
+    get:
+      summary: Panel con total de usuarios y entradas/salidas del día
+      tags: [Panel web]
+      responses:
+        "200": { description: Página HTML }
+        "302": { description: Sin sesión, redirige al login }
+  /registros.php:
+    get:
+      summary: Historial de entradas y salidas
+      tags: [Panel web]
+      responses:
+        "200": { description: Página HTML }
+        "302": { description: Sin sesión, redirige al login }
+  /cerrar_sesion.php:
+    get:
+      summary: Cierra la sesión del administrador
+      tags: [Panel web]
+      responses:
+        "302": { description: Redirige al login }
+components:
+  schemas:
+    LoginExitoso:
+      type: object
+      properties:
+        status: { type: string, enum: [success] }
+        nombre: { type: string }
+        correo: { type: string }
+        token: { type: string, description: Token del QR (32 hex) }
+    ValidacionExitosa:
+      type: object
+      properties:
+        status: { type: string, enum: [success] }
+        nombre: { type: string }
+        tipo: { type: string, enum: [ENTRADA, SALIDA] }
+    Error:
+      type: object
+      properties:
+        status: { type: string, enum: [error] }
+        mensaje: { type: string }

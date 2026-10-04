@@ -1,0 +1,251 @@
+{
+  "info": {
+    "name": "MICAJHOVIC API",
+    "description": "Colección para probar la API de la app móvil. Cambiar base_url, correo y password en Variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Login app - faltan datos",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status error', () => pm.expect(pm.response.json().status).to.eql('error'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": []
+        },
+        "url": {
+          "raw": "{{base_url}}/login_app.php",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "login_app.php"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Login app - credenciales malas",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status error', () => pm.expect(pm.response.json().status).to.eql('error'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "correo",
+              "value": "{{correo}}"
+            },
+            {
+              "key": "password",
+              "value": "MALA1234"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/login_app.php",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "login_app.php"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Login app - correcto (guarda token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const j = pm.response.json();",
+              "pm.test('status success', () => pm.expect(j.status).to.eql('success'));",
+              "pm.test('token de 32 hex', () => pm.expect(j.token).to.match(/^[a-f0-9]{32}$/));",
+              "pm.collectionVariables.set('token', j.token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "correo",
+              "value": "{{correo}}"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/login_app.php",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "login_app.php"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Validar QR - registra ENTRADA o SALIDA",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const j = pm.response.json();",
+              "pm.test('status success', () => pm.expect(j.status).to.eql('success'));",
+              "pm.test('tipo valido', () => pm.expect(['ENTRADA','SALIDA']).to.include(j.tipo));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "token",
+              "value": "{{token}}"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/validar_qr.php",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "validar_qr.php"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Validar QR - mismo token (debe fallar)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('QR quemado', () => pm.expect(pm.response.json().mensaje).to.eql('QR inválido o ya utilizado'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "token",
+              "value": "{{token}}"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/validar_qr.php",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "validar_qr.php"
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Validar QR - token con formato malo",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status error', () => pm.expect(pm.response.json().status).to.eql('error'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "token",
+              "value": "abc' OR '1'='1"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/validar_qr.php",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "validar_qr.php"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://micajhovic-api.onrender.com"
+    },
+    {
+      "key": "correo",
+      "value": "camilo_100_5955@mcjv.com"
+    },
+    {
+      "key": "password",
+      "value": "XAZGJ3NF"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ]
+}
