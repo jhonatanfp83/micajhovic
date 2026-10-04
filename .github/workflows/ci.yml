@@ -72,6 +72,13 @@ jobs:
     needs: pruebas
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
     steps:
       - name: Desplegar en Render
-        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+        if: env.DEPLOY_HOOK != ''
+        run: curl -fsS -X POST "$DEPLOY_HOOK"
+
+      - name: Aviso si falta el Deploy Hook
+        if: env.DEPLOY_HOOK == ''
+        run: echo "::warning::Falta el secreto RENDER_DEPLOY_HOOK_URL, por eso no se desplegó"
