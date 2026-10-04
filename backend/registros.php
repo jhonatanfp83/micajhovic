@@ -13,7 +13,7 @@ header("Cache-Control: no-cache, no-store, must-revalidate");
 header("Pragma: no-cache");
 header("Expires: 0");
 
-include("conexion.php");
+require_once __DIR__ . '/conexion.php';
 
 ?>
 
@@ -599,25 +599,18 @@ Monitoreo inteligente de entradas y salidas en tiempo real
 
 <?php
 
-$query = mysqli_query($conexion,
-
-"SELECT usuarios.nombre,
-
+/* LEFT JOIN: si el usuario fue eliminado, su historial se sigue viendo */
+$query = $conexion->query(
+"SELECT COALESCE(usuarios.nombre, '(usuario eliminado)') AS nombre,
 registros.fecha,
-
 registros.hora,
-
 registros.tipo
-
 FROM registros
-
-INNER JOIN usuarios
-
+LEFT JOIN usuarios
 ON registros.usuario_id = usuarios.id
-
 ORDER BY registros.id DESC");
 
-while($fila=mysqli_fetch_array($query)){
+foreach($query as $fila){
 
 ?>
 
@@ -625,19 +618,19 @@ while($fila=mysqli_fetch_array($query)){
 
 <td>
 
-<?php echo $fila['nombre']; ?>
+<?php echo e($fila['nombre']); ?>
 
 </td>
 
 <td>
 
-<?php echo $fila['fecha']; ?>
+<?php echo e($fila['fecha']); ?>
 
 </td>
 
 <td>
 
-<?php echo $fila['hora']; ?>
+<?php echo e($fila['hora']); ?>
 
 </td>
 

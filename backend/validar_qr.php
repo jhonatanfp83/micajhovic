@@ -1,105 +1,70 @@
 <?php
+/**
+ * API - Validación del QR en la portería (app del vigilante).
+ *
+ * POST validar_qr.php   (application/x-www-form-urlencoded)
+ *   token
+ *
+ * 1. Busca al usuario dueño del token.
+ * 2. Decide si es ENTRADA o SALIDA según su último registro.
+ * 3. Guarda el registro con fecha y hora de Colombia.
+ * 4. "Quema" el QR: le asigna un token nuevo, así el mismo QR no sirve dos veces.
+ */
 
-include("conexion.php");
+require_once __DIR__ . '/conexion.php';
 
-$token = $_POST['token'];
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    responderJson(['status' => 'error', 'mensaje' => 'Método no permitido'], 405);
+}
 
-/* BUSCAR USUARIO */
+$token = trim($_POST['token'] ?? '');
 
-$query = mysqli_query($conexion,
+if ($token === '' || !tokenTieneFormato($token)) {
+    responderJson(['status' => 'error', 'mensaje' => 'QR inválido']);
+}
 
-"SELECT * FROM usuarios
-WHERE qr_token='$token'");
+try {
+    $conexion->beginTransaction();
 
-if(mysqli_num_rows($query)>0){
+    /* BUSCAR USUARIO */
+    $stmt = $conexion->prepare('SELECT id, nombre FROM usuarios WHERE qr_token = ?');
+    $stmt->execute([$token]);
+    $usuario = $stmt->fetch();
 
-    $usuario = mysqli_fetch_assoc($query);
-
-    $usuario_id = $usuario['id'];
-
-    /* VERIFICAR ULTIMO REGISTRO */
-
-    $ultimo = mysqli_query($conexion,
-
-    "SELECT * FROM registros
-
-    WHERE usuario_id='$usuario_id'
-
-    ORDER BY id DESC
-
-    LIMIT 1");
-
-    if(mysqli_num_rows($ultimo)>0){
-
-        $dato = mysqli_fetch_assoc($ultimo);
-
-        /* SI LA ULTIMA FUE ENTRADA */
-
-        if($dato['tipo']=="ENTRADA"){
-
-            $tipo = "SALIDA";
-
-        }else{
-
-            $tipo = "ENTRADA";
-        }
-
-    }else{
-
-        /* PRIMER REGISTRO */
-
-        $tipo = "ENTRADA";
+    if (!$usuario) {
+        $conexion->rollBack();
+        responderJson(['status' => 'error', 'mensaje' => 'QR inválido o ya utilizado']);
     }
 
+    /* QUEMAR QR (solo una lectura puede ganar si llegan dos al tiempo) */
+    $quemar = $conexion->prepare('UPDATE usuarios SET qr_token = ? WHERE id = ? AND qr_token = ?');
+    $quemar->execute([generarToken(), $usuario['id'], $token]);
+
+    if ($quemar->rowCount() === 0) {
+        $conexion->rollBack();
+        responderJson(['status' => 'error', 'mensaje' => 'QR inválido o ya utilizado']);
+    }
+
+    /* VERIFICAR ULTIMO REGISTRO */
+    $ultimo = $conexion->prepare('SELECT tipo FROM registros WHERE usuario_id = ? ORDER BY id DESC LIMIT 1');
+    $ultimo->execute([$usuario['id']]);
+    $tipo = siguienteTipo($ultimo->fetchColumn() ?: null);
+
     /* GUARDAR REGISTRO */
+    $conexion->prepare('INSERT INTO registros (usuario_id, fecha, hora, tipo) VALUES (?, ?, ?, ?)')
+             ->execute([$usuario['id'], date('Y-m-d'), date('H:i:s'), $tipo]);
 
-    mysqli_query($conexion,
-
-    "INSERT INTO registros(
-
-    usuario_id,
-    fecha,
-    hora,
-    tipo
-
-    )
-
-    VALUES(
-
-    '$usuario_id',
-    CURDATE(),
-    CURTIME(),
-    '$tipo'
-
-    )");
-
-    /* QUEMAR QR */
-
-    $nuevo_token = md5(uniqid(rand(), true));
-
-    mysqli_query($conexion,
-
-    "UPDATE usuarios
-
-    SET qr_token='$nuevo_token'
-
-    WHERE id='$usuario_id'");
-
-    echo json_encode([
-
-        "status"=>"success",
-
-        "nombre"=>$usuario['nombre'],
-
-        "tipo"=>$tipo
-
-    ]);
-
-}else{
-
-    echo json_encode([
-
-        "status"=>"error"
-    ]);
+    $conexion->commit();
+} catch (PDOException $e) {
+    if ($conexion->inTransaction()) {
+        $conexion->rollBack();
+    }
+    error_log('validar_qr: ' . $e->getMessage());
+    responderJson(['status' => 'error', 'mensaje' => 'Error del servidor'], 500);
 }
-?>
+
+responderJson([
+    'status' => 'success',
+    'nombre' => $usuario['nombre'],
+    'tipo'   => $tipo,
+]);
