@@ -1,5 +1,3 @@
-<!-- ============================ USUARIOS.PHP PREMIUM FINAL ============================ -->
-
 <?php
 
 session_start();
@@ -10,7 +8,7 @@ if(!isset($_SESSION['admin'])){
     exit();
 }
 
-include("conexion.php");
+require_once __DIR__ . '/conexion.php';
 
 ?>
 
@@ -622,39 +620,40 @@ Usuarios Registrados
 
 <?php
 
-$query = mysqli_query($conexion,
-"SELECT * FROM usuarios ORDER BY id DESC");
+$query = $conexion->query(
+"SELECT id, nombre, documento, correo, password FROM usuarios ORDER BY id DESC");
 
-while($fila=mysqli_fetch_array($query)){
+foreach($query as $fila){
 
 ?>
 
 <tr>
 
 <td>
-<?php echo $fila['id']; ?>
+<?php echo e($fila['id']); ?>
 </td>
 
 <td>
-<?php echo $fila['nombre']; ?>
+<?php echo e($fila['nombre']); ?>
 </td>
 
 <td>
-<?php echo $fila['documento']; ?>
+<?php echo e($fila['documento']); ?>
 </td>
 
 <td>
-<?php echo $fila['correo']; ?>
+<?php echo e($fila['correo']); ?>
 </td>
 
 <td>
-<?php echo $fila['password']; ?>
+<?php echo e($fila['password']); ?>
 </td>
 
 <td>
 
 <a
-href="eliminar_usuario.php?id=<?php echo $fila['id']; ?>"
+href="eliminar_usuario.php?id=<?php echo (int) $fila['id']; ?>"
+onclick="return confirm('¿Eliminar este usuario?');"
 class="btn btn-delete">
 
 <i class="fa-solid fa-trash"></i>

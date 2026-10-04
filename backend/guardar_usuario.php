@@ -1,109 +1,49 @@
 <?php
+/**
+ * Crea un usuario desde el panel (solo administradores).
+ * Genera automáticamente correo, contraseña y el primer token del QR.
+ */
 
-include("conexion.php");
+session_start();
 
-/* DATOS */
-
-$nombre = trim($_POST['nombre']);
-
-$documento = trim($_POST['documento']);
-
-/* VERIFICAR DOCUMENTO DUPLICADO */
-
-$verificar = mysqli_query($conexion,
-
-"SELECT * FROM usuarios
-WHERE documento='$documento'");
-
-if(mysqli_num_rows($verificar)>0){
-
-    echo "
-    <script>
-
-    alert('Documento ya registrado');
-
-    window.location='usuarios.php';
-
-    </script>
-    ";
-
+if (!isset($_SESSION['admin'])) {
+    header('Location: login.php');
     exit();
 }
 
-/* GENERAR CORREO UNICO */
+require_once __DIR__ . '/conexion.php';
 
-$nombre_limpio =
-strtolower(str_replace(' ','',$nombre));
+function avisar(string $mensaje): void
+{
+    $mensaje = json_encode($mensaje, JSON_UNESCAPED_UNICODE);
+    echo "<script>alert($mensaje); window.location='usuarios.php';</script>";
+    exit();
+}
 
-$random =
-rand(1000,9999);
+/* DATOS */
+$nombre    = normalizarNombre($_POST['nombre'] ?? '');
+$documento = trim($_POST['documento'] ?? '');
 
-$correo =
+/* VALIDACIONES */
+$errores = validarUsuario($nombre, $documento);
+if ($errores) {
+    avisar(implode("\n", $errores));
+}
 
-$nombre_limpio .
+/* VERIFICAR DOCUMENTO DUPLICADO */
+$verificar = $conexion->prepare('SELECT COUNT(*) FROM usuarios WHERE documento = ?');
+$verificar->execute([$documento]);
+if ((int) $verificar->fetchColumn() > 0) {
+    avisar('Documento ya registrado');
+}
 
-"_" .
-
-substr($documento,-4) .
-
-"_" .
-
-$random .
-
-"@mcjv.com";
-
-/* GENERAR PASSWORD */
-
-$password =
-
-substr(str_shuffle(
-
-"123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-),0,8);
-
-/* GENERAR TOKEN QR */
-
-$qr_token =
-
-md5(uniqid(rand(), true));
+/* GENERAR CORREO UNICO, PASSWORD Y TOKEN */
+$correo   = generarCorreo($nombre, $documento, random_int(1000, 9999));
+$password = generarPassword();
+$qrToken  = generarToken();
 
 /* INSERTAR */
+$conexion->prepare('INSERT INTO usuarios (nombre, documento, correo, password, qr_token) VALUES (?, ?, ?, ?, ?)')
+         ->execute([$nombre, $documento, $correo, $password, $qrToken]);
 
-mysqli_query($conexion,
-
-"INSERT INTO usuarios(
-
-nombre,
-documento,
-correo,
-password,
-qr_token
-
-)
-
-VALUES(
-
-'$nombre',
-'$documento',
-'$correo',
-'$password',
-'$qr_token'
-
-)");
-
-/* REDIRECCION */
-
-echo "
-
-<script>
-
-alert('Usuario creado correctamente');
-
-window.location='usuarios.php';
-
-</script>
-
-";
-
-?>
+avisar('Usuario creado correctamente');

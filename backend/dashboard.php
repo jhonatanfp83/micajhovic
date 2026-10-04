@@ -7,45 +7,19 @@ if(!isset($_SESSION['admin'])){
     exit();
 }
 
-include("conexion.php");
+require_once __DIR__ . '/conexion.php';
 
 /* TOTAL USUARIOS */
+$totalUsuarios = $conexion->query('SELECT COUNT(*) FROM usuarios')->fetchColumn();
 
-$queryUsuarios = mysqli_query($conexion,
-"SELECT COUNT(*) as total FROM usuarios");
+/* ENTRADAS Y SALIDAS DE HOY (fecha de Colombia, no la del servidor) */
+$conteo = $conexion->prepare('SELECT COUNT(*) FROM registros WHERE tipo = ? AND fecha = ?');
 
-$totalUsuarios =
-mysqli_fetch_assoc($queryUsuarios)['total'];
+$conteo->execute([TIPO_ENTRADA, date('Y-m-d')]);
+$totalEntradas = $conteo->fetchColumn();
 
-/* ENTRADAS HOY */
-
-$queryEntradas = mysqli_query($conexion,
-
-"SELECT COUNT(*) as total
-
-FROM registros
-
-WHERE tipo='ENTRADA'
-
-AND fecha = CURDATE()");
-
-$totalEntradas =
-mysqli_fetch_assoc($queryEntradas)['total'];
-
-/* SALIDAS HOY */
-
-$querySalidas = mysqli_query($conexion,
-
-"SELECT COUNT(*) as total
-
-FROM registros
-
-WHERE tipo='SALIDA'
-
-AND fecha = CURDATE()");
-
-$totalSalidas =
-mysqli_fetch_assoc($querySalidas)['total'];
+$conteo->execute([TIPO_SALIDA, date('Y-m-d')]);
+$totalSalidas = $conteo->fetchColumn();
 
 ?>
 
