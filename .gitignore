@@ -1,0 +1,20 @@
+# Configuración sensible
+.env
+backend/.env
+
+# Dependencias y caché de PHP
+vendor/
+.phpunit.result.cache
+composer.lock
+
+# Android
+mobile/**/build/
+mobile/**/.gradle/
+mobile/**/local.properties
+mobile/**/.idea/
+*.apk
+*.aab
+
+# Sistema
+.DS_Store
+Thumbs.db

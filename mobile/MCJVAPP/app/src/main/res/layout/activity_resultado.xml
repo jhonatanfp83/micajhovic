@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+    android:layout_width="match_parent"
+
+    android:layout_height="match_parent"
+
+    android:orientation="vertical"
+
+    android:gravity="center"
+
+    android:background="#050505"
+
+    android:padding="30dp">
+
+    <ImageView
+
+        android:id="@+id/icono"
+
+        android:layout_width="120dp"
+
+        android:layout_height="120dp"
+
+        android:tint="#00FF66"
+
+        android:layout_marginBottom="30dp"/>
+
+    <TextView
+
+        android:id="@+id/txtEstado"
+
+        android:layout_width="wrap_content"
+
+        android:layout_height="wrap_content"
+
+        android:text="APROBADO"
+
+        android:textSize="34sp"
+
+        android:textStyle="bold"
+
+        android:textColor="#00FF66"
+
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+
+        android:id="@+id/txtNombre"
+
+        android:layout_width="wrap_content"
+
+        android:layout_height="wrap_content"
+
+        android:text="Jhonatan"
+
+        android:textSize="28sp"
+
+        android:textColor="#FFFFFF"
+
+        android:textStyle="bold"
+
+        android:layout_marginBottom="15dp"/>
+
+    <TextView
+
+        android:id="@+id/txtTipo"
+
+        android:layout_width="wrap_content"
+
+        android:layout_height="wrap_content"
+
+        android:text="ENTRADA"
+
+        android:textSize="22sp"
+
+        android:textColor="#AAAAAA"/>
+</LinearLayout>
