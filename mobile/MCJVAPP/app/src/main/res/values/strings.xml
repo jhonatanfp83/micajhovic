@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">MCJV APP</string>
+    <!-- URL base del backend desplegado en la nube (terminar en /) -->
+    <string name="api_base_url" translatable="false">https://micajhovic-api.onrender.com/</string>
 </resources>

@@ -1,0 +1,29 @@
+# Blueprint de Render: crea el servicio web del backend desde este repositorio.
+# Las credenciales de la base de datos se cargan en el panel (sync: false), nunca en el código.
+services:
+  - type: web
+    name: micajhovic-api
+    runtime: docker
+    plan: free
+    branch: main
+    autoDeploy: false          # el despliegue lo dispara GitHub Actions cuando pasan las pruebas
+    healthCheckPath: /login.php
+    envVars:
+      - key: DB_DRIVER
+        value: mysql
+      - key: APP_TIMEZONE
+        value: America/Bogota
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: DB_SSL_CA_CONTENT
+        sync: false
