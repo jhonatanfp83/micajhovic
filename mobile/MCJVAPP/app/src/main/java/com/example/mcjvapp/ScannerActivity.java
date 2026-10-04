@@ -6,6 +6,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
@@ -176,6 +177,10 @@ public class ScannerActivity
                         return params;
                     }
                 };
+
+        /* Esperar hasta 60 s: el servidor gratis de Render puede estar dormido */
+        request.setRetryPolicy(
+                new DefaultRetryPolicy(60000, 0, 1f));
 
         Volley.newRequestQueue(this)
                 .add(request);
