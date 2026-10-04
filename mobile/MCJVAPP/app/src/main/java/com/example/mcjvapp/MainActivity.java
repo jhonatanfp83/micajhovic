@@ -24,8 +24,10 @@ public class MainActivity extends AppCompatActivity {
 
     Button btnLogin, btnScanner;
 
-    String URL =
-            "https://oppressor-shadow-dealmaker.ngrok-free.dev/control_qr/login_app.php";
+    /* La URL base sale de res/values/strings.xml (api_base_url) */
+    private String urlApi(){
+        return getString(R.string.api_base_url) + "login_app.php";
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
 
                         Request.Method.POST,
 
-                        URL,
+                        urlApi(),
 
                         response -> {
 

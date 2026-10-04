@@ -1,0 +1,9 @@
+# Bloquear archivos sensibles y carpetas internas
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+
+RedirectMatch 404 ^/(.*/)?includes/
+
+Options -Indexes
+DirectoryIndex index.php
