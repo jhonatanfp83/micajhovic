@@ -21,9 +21,10 @@ import java.util.Map;
 public class ScannerActivity
         extends AppCompatActivity {
 
-    String URL =
-
-            "https://oppressor-shadow-dealmaker.ngrok-free.dev/control_qr/validar_qr.php";
+    /* La URL base sale de res/values/strings.xml (api_base_url) */
+    private String urlApi(){
+        return getString(R.string.api_base_url) + "validar_qr.php";
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +88,7 @@ public class ScannerActivity
 
                         Request.Method.POST,
 
-                        URL,
+                        urlApi(),
 
                         response -> {
 

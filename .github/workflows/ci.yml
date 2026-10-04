@@ -1,0 +1,77 @@
+# CI/CD de MICAJHOVIC
+# - En cada push o pull request: revisa sintaxis, corre pruebas unitarias y de integración (con MySQL real).
+# - En push a main: si todo pasa, despliega en Render con el Deploy Hook.
+name: CI-CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: control_qr
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+
+    env:
+      DB_DRIVER: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: control_qr
+      DB_USER: root
+      DB_PASS: root
+      APP_TIMEZONE: America/Bogota
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_mysql, curl
+          tools: composer
+
+      - name: Instalar dependencias
+        run: composer install --no-interaction --no-progress
+
+      - name: Revisar sintaxis PHP
+        run: find backend tests -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Pruebas unitarias
+        run: vendor/bin/phpunit --testsuite unit
+
+      - name: Crear tablas en MySQL
+        run: mysql -h 127.0.0.1 -uroot -proot control_qr < database/control_qr.sql
+
+      - name: Levantar backend
+        run: php -S 127.0.0.1:8000 -t backend > servidor.log 2>&1 &
+
+      - name: Pruebas de integración
+        env:
+          BASE_URL: http://127.0.0.1:8000
+        run: |
+          sleep 2
+          vendor/bin/phpunit --testsuite integracion
+
+      - name: Log del servidor (si algo falla)
+        if: failure()
+        run: cat servidor.log
+
+  desplegar:
+    needs: pruebas
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Desplegar en Render
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
