@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
@@ -142,6 +143,10 @@ public class MainActivity extends AppCompatActivity {
                         return params;
                     }
                 };
+
+        /* Esperar hasta 60 s: el servidor gratis de Render puede estar dormido */
+        request.setRetryPolicy(
+                new DefaultRetryPolicy(60000, 0, 1f));
 
         RequestQueue queue =
                 Volley.newRequestQueue(this);
