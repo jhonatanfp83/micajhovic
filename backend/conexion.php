@@ -11,6 +11,7 @@
 
 require_once __DIR__ . '/includes/env.php';
 require_once __DIR__ . '/includes/funciones.php';
+require_once __DIR__ . '/includes/esquema.php';
 
 date_default_timezone_set(env('APP_TIMEZONE', 'America/Bogota'));
 
@@ -55,6 +56,7 @@ function conectar(): PDO
 
 try {
     $conexion = conectar();
+    asegurarEsquema($conexion);
 } catch (PDOException $e) {
     error_log('Error de conexión: ' . $e->getMessage());
     http_response_code(500);
