@@ -1,7 +1,7 @@
 # MICAJHOVIC – Control de acceso con QR dinámicos
 
 Sistema de registro de **entradas y salidas** con códigos QR que **cambian en cada uso**.
-El usuario abre la app, inicia sesión y se le muestra un QR. En la portería, el vigilante lo escanea;
+El usuario abre la app, inicia sesión y se le muestra un QR. En la entrada, el sistema de escaneo de la universidad lo lee;
 el sistema registra ENTRADA o SALIDA y ese QR deja de servir (queda "quemado").
 
 Proyecto de aula – Desarrollo de aplicaciones en la nube · Fundación Universitaria Los Libertadores

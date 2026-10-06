@@ -1,6 +1,6 @@
 <?php
 /**
- * API - Validación del QR en la portería (app del vigilante).
+ * API - Validación del QR en el sistema de escaneo de la universidad (entrada).
  *
  * POST validar_qr.php   (application/x-www-form-urlencoded)
  *   token
