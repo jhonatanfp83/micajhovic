@@ -5,7 +5,7 @@ info:
   description: |
     API que consume la app móvil MCJV (Android).
     - El usuario inicia sesión y recibe un token que la app convierte en código QR.
-    - En la portería, la app del vigilante escanea el QR y llama a validar_qr.php.
+    - En la entrada, el sistema de escaneo de la universidad lee el QR y llama a validar_qr.php.
     - Cada token sirve UNA sola vez: después de leerlo se reemplaza ("QR quemado").
 
     Nota: los errores de negocio responden HTTP 200 con `status: "error"`, porque así
@@ -51,7 +51,7 @@ paths:
         "405": { description: Método no permitido (solo POST) }
   /validar_qr.php:
     post:
-      summary: Valida un QR en la portería y registra ENTRADA o SALIDA
+      summary: Valida un QR leído por el sistema de escaneo y registra ENTRADA o SALIDA
       description: |
         Si el último registro del usuario fue ENTRADA, registra SALIDA; si no, ENTRADA.
         Guarda fecha y hora de Colombia y cambia el token del usuario.
