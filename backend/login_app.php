@@ -28,8 +28,16 @@ $stmt = $conexion->prepare('SELECT id, nombre, correo, password FROM usuarios WH
 $stmt->execute([$correo]);
 $usuario = $stmt->fetch();
 
-if (!$usuario || !hash_equals((string) $usuario['password'], $password)) {
+/* La contraseña está cifrada con password_hash (BUG-13). Si es una clave antigua
+   en texto plano se acepta una vez y se cifra en ese momento. */
+$necesitaRehash = false;
+if (!$usuario || !verificarPasswordAdmin($password, (string) $usuario['password'], $necesitaRehash)) {
     responderJson(['status' => 'error', 'mensaje' => 'Credenciales incorrectas']);
+}
+
+if ($necesitaRehash) {
+    $conexion->prepare('UPDATE usuarios SET password = ? WHERE id = ?')
+             ->execute([password_hash($password, PASSWORD_DEFAULT), $usuario['id']]);
 }
 
 /* GENERAR Y GUARDAR NUEVO TOKEN */
