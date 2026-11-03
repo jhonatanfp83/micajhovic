@@ -44,6 +44,7 @@ $qrToken  = generarToken();
 
 /* INSERTAR */
 $conexion->prepare('INSERT INTO usuarios (nombre, documento, correo, password, qr_token) VALUES (?, ?, ?, ?, ?)')
-         ->execute([$nombre, $documento, $correo, $password, $qrToken]);
+         ->execute([$nombre, $documento, $correo, password_hash($password, PASSWORD_DEFAULT), $qrToken]);
 
-avisar('Usuario creado correctamente');
+/* La contraseña se guarda cifrada (BUG-13): se muestra UNA sola vez para entregarla al usuario */
+avisar("Usuario creado correctamente\nCorreo: $correo\nContraseña: $password\nAnótela: no se volverá a mostrar.");

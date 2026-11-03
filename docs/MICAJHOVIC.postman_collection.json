@@ -228,6 +228,48 @@
           ]
         }
       }
+    },
+    {
+      "name": "7. Token actual - QR nuevo tras el escaneo",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const j = pm.response.json();",
+              "pm.test('status success', () => pm.expect(j.status).to.eql('success'));",
+              "pm.test('el token cambió después de escanear', () => pm.expect(j.token).to.not.eql(pm.collectionVariables.get('token')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "correo",
+              "value": "{{correo}}"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/token_actual.php",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "token_actual.php"
+          ]
+        }
+      }
     }
   ],
   "variable": [

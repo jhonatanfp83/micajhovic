@@ -32,6 +32,7 @@ backend/            Código PHP (se publica tal cual en el servidor)
   includes/         env.php (variables de entorno) y funciones.php (lógica de negocio)
   conexion.php      Conexión PDO usando variables de entorno
   login_app.php     API: login de la app y token nuevo
+  token_actual.php  API: token vigente (la app refresca el QR tras cada escaneo)
   validar_qr.php    API: validar QR y registrar ENTRADA/SALIDA
   *.php             Panel admin: login, dashboard, usuarios, registros
 database/           control_qr.sql (esquema MySQL), seed_demo.sql, schema_sqlite.sql (solo pruebas)
@@ -101,8 +102,9 @@ y colección en [`docs/MICAJHOVIC.postman_collection.json`](docs/MICAJHOVIC.post
 | Método | Ruta | Descripción |
 |---|---|---|
 | POST | `/login_app.php` | Login de la app, devuelve un token nuevo para el QR |
+| POST | `/token_actual.php` | Token vigente del QR; la app lo consulta para mostrar el QR nuevo después de cada escaneo |
 | POST | `/validar_qr.php` | Valida el QR, registra ENTRADA/SALIDA y quema el token |
 | POST | `/validar.php` | Login del administrador |
-| POST | `/guardar_usuario.php` | Crear usuario (genera correo, clave y token) |
-| GET | `/eliminar_usuario.php?id=` | Eliminar usuario (conserva su historial) |
+| POST | `/guardar_usuario.php` | Crear usuario (genera correo, clave y token; la clave se muestra una sola vez y se guarda cifrada) |
+| POST | `/eliminar_usuario.php` | Eliminar usuario con token CSRF (conserva su historial) |
 | GET | `/dashboard.php`, `/usuarios.php`, `/registros.php` | Vistas del panel |
