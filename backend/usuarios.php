@@ -10,6 +10,11 @@ if(!isset($_SESSION['admin'])){
 
 require_once __DIR__ . '/conexion.php';
 
+/* Token CSRF para el formulario de eliminar (BUG-15) */
+if (empty($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(32));
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -609,7 +614,6 @@ Usuarios Registrados
 <th>Nombre</th>
 <th>Documento</th>
 <th>Correo</th>
-<th>Contraseña</th>
 <th>Acción</th>
 
 </tr>
@@ -621,7 +625,7 @@ Usuarios Registrados
 <?php
 
 $query = $conexion->query(
-"SELECT id, nombre, documento, correo, password FROM usuarios ORDER BY id DESC");
+"SELECT id, nombre, documento, correo FROM usuarios ORDER BY id DESC");
 
 foreach($query as $fila){
 
@@ -646,21 +650,25 @@ foreach($query as $fila){
 </td>
 
 <td>
-<?php echo e($fila['password']); ?>
-</td>
 
-<td>
+<form
+method="POST"
+action="eliminar_usuario.php"
+class="d-inline"
+onsubmit="return confirm('¿Eliminar este usuario?');">
 
-<a
-href="eliminar_usuario.php?id=<?php echo (int) $fila['id']; ?>"
-onclick="return confirm('¿Eliminar este usuario?');"
-class="btn btn-delete">
+<input type="hidden" name="id" value="<?php echo (int) $fila['id']; ?>">
+<input type="hidden" name="csrf" value="<?php echo e($_SESSION['csrf']); ?>">
+
+<button type="submit" class="btn btn-delete">
 
 <i class="fa-solid fa-trash"></i>
 
 Eliminar
 
-</a>
+</button>
+
+</form>
 
 </td>
 
