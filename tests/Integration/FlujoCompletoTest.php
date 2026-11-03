@@ -21,6 +21,7 @@ final class FlujoCompletoTest extends TestCase
     /** Datos compartidos entre pasos */
     private static array $usuario = [];
     private static string $token = '';
+    private static string $password = '';
 
     public static function setUpBeforeClass(): void
     {
@@ -114,13 +115,20 @@ final class FlujoCompletoTest extends TestCase
         [, , $cuerpo] = $this->http('POST', 'guardar_usuario.php', ['nombre' => 'Prueba Integracion', 'documento' => '900100200']);
         $this->assertStringContainsString('Usuario creado correctamente', $cuerpo);
 
+        // La contraseña se muestra una sola vez en el aviso (BUG-13)
+        $this->assertMatchesRegularExpression('/Contraseña: ([1-9A-Z]{8})/u', $cuerpo);
+        preg_match('/Contraseña: ([1-9A-Z]{8})/u', $cuerpo, $m);
+        self::$password = $m[1];
+
         $stmt = self::$db->prepare('SELECT * FROM usuarios WHERE documento = ?');
         $stmt->execute(['900100200']);
         self::$usuario = $stmt->fetch();
 
         $this->assertNotEmpty(self::$usuario);
         $this->assertStringEndsWith('@mcjv.com', self::$usuario['correo']);
-        $this->assertSame(8, strlen(self::$usuario['password']));
+        // En la base queda cifrada, nunca en texto plano
+        $this->assertNotSame(self::$password, self::$usuario['password']);
+        $this->assertTrue(password_verify(self::$password, self::$usuario['password']));
     }
 
     public function test06DocumentoDuplicadoEsRechazado(): void
@@ -174,12 +182,22 @@ final class FlujoCompletoTest extends TestCase
 
     public function test13LoginAppCorrectoEntregaTokenNuevo(): void
     {
-        $json = $this->json('login_app.php', ['correo' => self::$usuario['correo'], 'password' => self::$usuario['password']]);
+        $json = $this->json('login_app.php', ['correo' => self::$usuario['correo'], 'password' => self::$password]);
         $this->assertSame('success', $json['status']);
         $this->assertSame('Prueba Integracion', $json['nombre']);
         $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $json['token']);
         $this->assertNotSame(self::$usuario['qr_token'], $json['token']);
         self::$token = $json['token'];
+    }
+
+    public function test13bTokenActualDevuelveElQrVigente(): void
+    {
+        $json = $this->json('token_actual.php', ['correo' => self::$usuario['correo'], 'password' => self::$password]);
+        $this->assertSame('success', $json['status']);
+        $this->assertSame(self::$token, $json['token']);
+
+        $malo = $this->json('token_actual.php', ['correo' => self::$usuario['correo'], 'password' => 'XXXXXXXX']);
+        $this->assertSame('error', $malo['status']);
     }
 
     public function test14PrimerEscaneoRegistraEntrada(): void
@@ -202,12 +220,36 @@ final class FlujoCompletoTest extends TestCase
         $this->assertSame('QR inválido o ya utilizado', $json['mensaje']);
     }
 
+    public function test15bTrasEscanearLaAppRecibeUnQrNuevo(): void
+    {
+        // BUG-14: la app consulta token_actual.php y muestra el QR nuevo sin volver a iniciar sesión
+        $json = $this->json('token_actual.php', ['correo' => self::$usuario['correo'], 'password' => self::$password]);
+        $this->assertSame('success', $json['status']);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $json['token']);
+        $this->assertNotSame(self::$token, $json['token']);
+    }
+
     public function test16NuevoQrRegistraSalida(): void
     {
-        $login = $this->json('login_app.php', ['correo' => self::$usuario['correo'], 'password' => self::$usuario['password']]);
+        $login = $this->json('login_app.php', ['correo' => self::$usuario['correo'], 'password' => self::$password]);
         $json = $this->json('validar_qr.php', ['token' => $login['token']]);
         $this->assertSame('success', $json['status']);
         $this->assertSame('SALIDA', $json['tipo']);
+    }
+
+    public function test16bClaveAntiguaEnTextoPlanoSeCifraAlEntrar(): void
+    {
+        self::$db->prepare('UPDATE usuarios SET password = ? WHERE id = ?')
+                 ->execute(['CLAVE123', self::$usuario['id']]);
+
+        $json = $this->json('login_app.php', ['correo' => self::$usuario['correo'], 'password' => 'CLAVE123']);
+        $this->assertSame('success', $json['status']);
+
+        $stmt = self::$db->prepare('SELECT password FROM usuarios WHERE id = ?');
+        $stmt->execute([self::$usuario['id']]);
+        $guardada = $stmt->fetchColumn();
+        $this->assertNotSame('CLAVE123', $guardada);
+        $this->assertTrue(password_verify('CLAVE123', $guardada));
     }
 
     public function test17TokenConFormatoInvalido(): void
@@ -247,13 +289,36 @@ final class FlujoCompletoTest extends TestCase
         [, , $cuerpo] = $this->http('GET', 'usuarios.php');
         $this->assertStringContainsString('&lt;b&gt;Prueba Integracion&lt;/b&gt;', $cuerpo);
         $this->assertStringNotContainsString('<b>Prueba Integracion</b>', $cuerpo);
+
+        // El panel ya no muestra contraseñas (BUG-13)
+        $this->assertStringNotContainsString('Contraseña', $cuerpo);
+        $this->assertStringNotContainsString('$2y$', $cuerpo);
     }
 
     public function test22EliminarUsuarioConservaHistorial(): void
     {
-        $this->http('GET', 'eliminar_usuario.php?id=' . self::$usuario['id']);
-
         $stmt = self::$db->prepare('SELECT COUNT(*) FROM usuarios WHERE id = ?');
+
+        // BUG-15: por GET (un simple enlace) ya no se puede borrar
+        [$codigo] = $this->http('GET', 'eliminar_usuario.php?id=' . self::$usuario['id']);
+        $this->assertSame(405, $codigo);
+
+        // ...ni por POST sin el token CSRF de la sesión
+        [$codigo] = $this->http('POST', 'eliminar_usuario.php', ['id' => self::$usuario['id'], 'csrf' => 'falso']);
+        $this->assertSame(403, $codigo);
+
+        $stmt->execute([self::$usuario['id']]);
+        $this->assertSame(1, (int) $stmt->fetchColumn());
+        $stmt->closeCursor(); // libera la lectura antes de que el servidor escriba
+
+        // Con el formulario del panel (POST + token) sí se elimina
+        [, , $pagina] = $this->http('GET', 'usuarios.php');
+        $this->assertMatchesRegularExpression('/name="csrf" value="([a-f0-9]{64})"/', $pagina);
+        preg_match('/name="csrf" value="([a-f0-9]{64})"/', $pagina, $m);
+
+        [$codigo] = $this->http('POST', 'eliminar_usuario.php', ['id' => self::$usuario['id'], 'csrf' => $m[1]]);
+        $this->assertSame(302, $codigo);
+
         $stmt->execute([self::$usuario['id']]);
         $this->assertSame(0, (int) $stmt->fetchColumn());
 
