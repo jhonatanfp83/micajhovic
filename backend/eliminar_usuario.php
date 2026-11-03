@@ -2,6 +2,9 @@
 /**
  * Elimina un usuario (solo administradores).
  * Sus registros de acceso se conservan para el historial (usuario_id queda en NULL).
+ *
+ * Solo acepta POST con el token CSRF de la sesión (BUG-15): un enlace o una
+ * imagen en otra página ya no pueden borrar usuarios.
  */
 
 session_start();
@@ -13,7 +16,19 @@ if (!isset($_SESSION['admin'])) {
 
 require_once __DIR__ . '/conexion.php';
 
-$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST');
+    exit('Método no permitido');
+}
+
+$csrf = (string) ($_POST['csrf'] ?? '');
+if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $csrf)) {
+    http_response_code(403);
+    exit('Solicitud no válida');
+}
+
+$id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
 
 if ($id) {
     $conexion->prepare('UPDATE registros SET usuario_id = NULL WHERE usuario_id = ?')->execute([$id]);
