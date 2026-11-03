@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: MICAJHOVIC API - Control de acceso con QR dinámicos
-  version: 1.0.0
+  version: 1.1.0
   description: |
     API que consume la app móvil MCJV (Android).
     - El usuario inicia sesión y recibe un token que la app convierte en código QR.
@@ -46,6 +46,39 @@ paths:
                   value: { status: success, nombre: camilo, correo: camilo_100_5955@mcjv.com, token: 3f1c0b8e9a7d4c2b8e1f0a9d7c6b5a43 }
                 faltanDatos:
                   value: { status: error, mensaje: Faltan datos }
+                credenciales:
+                  value: { status: error, mensaje: Credenciales incorrectas }
+        "405": { description: Método no permitido (solo POST) }
+  /token_actual.php:
+    post:
+      summary: Devuelve el token vigente del QR sin cambiarlo
+      description: |
+        La app lo consulta cada 4 segundos mientras muestra el QR. Cuando el sistema de
+        escaneo usa el QR, validar_qr.php asigna un token nuevo y la app muestra el QR
+        nuevo sin volver a iniciar sesión (corrige BUG-14).
+      tags: [App móvil]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [correo, password]
+              properties:
+                correo: { type: string, example: camilo_100_5955@mcjv.com }
+                password: { type: string, example: XAZGJ3NF }
+      responses:
+        "200":
+          description: Token vigente o error
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/TokenActual'
+                  - $ref: '#/components/schemas/Error'
+              examples:
+                exito:
+                  value: { status: success, token: 9b2d7e4f1a0c3b5d6e8f7a1b2c3d4e5f }
                 credenciales:
                   value: { status: error, mensaje: Credenciales incorrectas }
         "405": { description: Método no permitido (solo POST) }
@@ -112,19 +145,26 @@ paths:
                 nombre: { type: string, example: Victor Oviedo }
                 documento: { type: string, pattern: '^\d{5,15}$', example: '1000123456' }
       responses:
-        "200": { description: "Alerta con el resultado: creado, documento duplicado o error de validación" }
+        "200": { description: "Alerta con el resultado: creado (muestra correo y contraseña UNA sola vez; en la base se guarda cifrada), documento duplicado o error de validación" }
         "302": { description: Sin sesión, redirige al login }
   /eliminar_usuario.php:
-    get:
-      summary: Elimina un usuario (requiere sesión). Su historial se conserva.
+    post:
+      summary: Elimina un usuario (requiere sesión y token CSRF). Su historial se conserva.
       tags: [Panel web]
-      parameters:
-        - in: query
-          name: id
-          required: true
-          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [id, csrf]
+              properties:
+                id: { type: integer }
+                csrf: { type: string, description: Token CSRF que el panel pone en el formulario }
       responses:
-        "302": { description: Redirige a usuarios.php }
+        "302": { description: Eliminado, redirige a usuarios.php (o al login si no hay sesión) }
+        "403": { description: Token CSRF inválido }
+        "405": { description: Solo se acepta POST }
   /dashboard.php:
     get:
       summary: Panel con total de usuarios y entradas/salidas del día
@@ -154,6 +194,11 @@ components:
         nombre: { type: string }
         correo: { type: string }
         token: { type: string, description: Token del QR (32 hex) }
+    TokenActual:
+      type: object
+      properties:
+        status: { type: string, enum: [success] }
+        token: { type: string, description: Token vigente del QR (32 hex) }
     ValidacionExitosa:
       type: object
       properties:
