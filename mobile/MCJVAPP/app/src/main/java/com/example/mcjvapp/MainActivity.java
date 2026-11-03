@@ -103,6 +103,11 @@ public class MainActivity extends AppCompatActivity {
                                             "token",
                                             json.getString("token"));
 
+                                    /* Para refrescar el QR después de cada escaneo (BUG-14) */
+                                    i.putExtra("correo", correo);
+
+                                    i.putExtra("password", password);
+
                                     startActivity(i);
 
                                 }else{
