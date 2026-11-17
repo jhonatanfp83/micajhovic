@@ -6,7 +6,17 @@ el sistema registra ENTRADA o SALIDA y ese QR deja de servir (queda "quemado").
 
 Proyecto de aula – Desarrollo de aplicaciones en la nube · Fundación Universitaria Los Libertadores
 
-| Integrante | Rol en la Fase 2 |
+## Enlaces
+
+| Qué | Enlace |
+|---|---|
+| Panel web y API (producción) | https://micajhovic-api.onrender.com |
+| App Android (APK) | https://github.com/jhonatanfp83/micajhovic/releases/latest |
+| Documentación de la API | [`docs/openapi.yaml`](docs/openapi.yaml) · [Postman](docs/MICAJHOVIC.postman_collection.json) |
+| Pipeline CI/CD | https://github.com/jhonatanfp83/micajhovic/actions |
+| Bugs e historias | https://github.com/jhonatanfp83/micajhovic/issues |
+
+| Integrante | Rol |
 |---|---|
 | Jhonatan Steven Florez Pinzon | Líder técnico / Arquitecto · DevOps |
 | Camilo Gonzalez Bustos | Desarrollador Backend |
@@ -55,6 +65,37 @@ render.yaml         Configuración del servicio en Render
 
 Flujo: `feature/*` → Pull Request a `develop` (revisión de al menos 1 compañero) → PR de `develop` a `main`.
 
+## Requisitos
+
+| Para | Necesitas |
+|---|---|
+| Backend en local | PHP 8.1 o superior con `pdo_mysql` (XAMPP 8.2 sirve) y MySQL 8 o MariaDB 10.4+ |
+| Pruebas | Composer 2 (instala PHPUnit 10) y la extensión `pdo_sqlite` |
+| Contenedor (opcional) | Docker Desktop |
+| App móvil | Android Studio (o solo instalar el APK de la release `app-movil`) |
+
+## Variables de entorno
+
+En local se leen de `backend/.env` (copiar `.env.example`). En la nube se configuran en Render → *Environment*.
+El archivo `.env` nunca se sube al repositorio (está en `.gitignore`).
+
+| Variable | Ejemplo | Para qué sirve |
+|---|---|---|
+| `DB_DRIVER` | `mysql` | `mysql` en local y producción; `sqlite` solo para pruebas |
+| `DB_HOST` | `localhost` | Servidor de MySQL (en producción, el host de Aiven) |
+| `DB_PORT` | `3306` | Puerto de MySQL |
+| `DB_NAME` | `control_qr` | Nombre de la base de datos |
+| `DB_USER` | `root` | Usuario de MySQL |
+| `DB_PASS` | *(vacío en XAMPP)* | Clave de MySQL |
+| `DB_SSL` | `false` | `true` si la base exige TLS (Aiven) |
+| `DB_SSL_CA_CONTENT` | *(contenido del `ca.pem`)* | Certificado de la base en la nube |
+| `APP_TIMEZONE` | `America/Bogota` | Zona horaria de los registros |
+| `AUTO_MIGRAR` | `true` | Crea las tablas solas en el primer arranque (poner `false` para desactivarlo) |
+| `ADMIN_EMAIL` | `admin@gmail.com` | Correo del primer administrador (solo si la tabla está vacía) |
+| `ADMIN_PASSWORD` | *(definir)* | Clave del primer administrador (si no se pone, es `1234`; cambiarla) |
+
+Secreto de GitHub Actions: `RENDER_DEPLOY_HOOK_URL` (despliegue automático en Render).
+
 ## Correr en local (XAMPP)
 
 1. Clonar el repositorio dentro de `C:\xampp\htdocs\micajhovic`.
@@ -65,6 +106,24 @@ Flujo: `feature/*` → Pull Request a `develop` (revisión de al menos 1 compañ
    (cambiar la clave después del primer ingreso).
 5. En la app, cambiar `api_base_url` en `mobile/MCJVAPP/app/src/main/res/values/strings.xml`
    (con ngrok o la IP del PC si se prueba en el celular).
+
+## Correr en local con Docker (igual que en producción)
+
+```bash
+docker build -t micajhovic .
+docker run --rm -p 8080:8080 --env-file backend/.env micajhovic
+# abrir http://localhost:8080/login.php
+```
+
+Si MySQL corre en el mismo PC, en `backend/.env` usar `DB_HOST=host.docker.internal`.
+Con `AUTO_MIGRAR=true` las tablas y el primer administrador se crean solos.
+
+## Uso rápido
+
+1. El administrador entra al panel, crea el usuario con nombre y documento, y le entrega el correo y la clave que muestra el aviso (solo se ven una vez).
+2. El usuario instala la app, inicia sesión y ve su QR.
+3. En la entrada, el sistema de escaneo lee el QR: registra ENTRADA o SALIDA y el QR cambia solo en la app.
+4. El administrador revisa el conteo del día en *Inicio* y el historial en *Registros*.
 
 ## Pruebas
 
